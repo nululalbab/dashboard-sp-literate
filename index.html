@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Gap Analysis Indeks SP & ETPD</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet CSS & JS CDN (Versi Terbaru yang Lebih Stabil) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+        }
+        /* Pastikan map index tidak tertutup elemen lain */
+        #map { z-index: 10; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen">
+
+    <!-- Top Navigation -->
+    <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center shadow-lg relative z-20">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2.5 rounded-xl text-white">
+                <i class="fa-solid fa-chart-pie text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-wide">Monitoring Gap Analysis Indeks SP vs ETPD</h1>
+                <p class="text-xs text-slate-400">Evaluasi Kesenjangan Pemahaman Kebijakan SP & Realisasi ETPD (Semester II 2025)</p>
+            </div>
+        </div>
+        <div class="mt-4 md:mt-0 flex items-center space-x-4">
+            <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs px-3 py-1.5 rounded-full font-medium">
+                <i class="fa-solid fa-database mr-1"></i> Data Terintegrasi BI
+            </span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 max-w-[1600px] mx-auto space-y-6">
+
+        <!-- Kategori & Legenda Warna Gap Analysis -->
+        <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+            <h2 class="text-sm font-bold text-slate-200 mb-3 flex items-center">
+                <i class="fa-solid fa-palette text-amber-400 mr-2"></i> Indikator Warna Kategori Gap Analysis
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-rose-950/40 border border-rose-800/60 p-3 rounded-lg flex items-start space-x-3">
+                    <div class="w-4 h-4 rounded-full bg-rose-500 shrink-0 mt-0.5"></div>
+                    <div>
+                        <h4 class="font-bold text-xs text-rose-300">Kesenjangan Tinggi (High Gap)</h4>
+                        <p class="text-[11px] text-slate-400 leading-tight mt-1">Awareness <b>Sangat Tinggi</b>, ETPD &lt; 0.85.</p>
+                    </div>
+                </div>
+                <div class="bg-amber-950/40 border border-amber-800/60 p-3 rounded-lg flex items-start space-x-3">
+                    <div class="w-4 h-4 rounded-full bg-amber-500 shrink-0 mt-0.5"></div>
+                    <div>
+                        <h4 class="font-bold text-xs text-amber-300">Kesenjangan Sedang (Moderate)</h4>
+                        <p class="text-[11px] text-slate-400 leading-tight mt-1">Awareness <b>Tinggi</b>, ETPD 0.70 - 0.84.</p>
+                    </div>
+                </div>
+                <div class="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-lg flex items-start space-x-3">
+                    <div class="w-4 h-4 rounded-full bg-emerald-500 shrink-0 mt-0.5"></div>
+                    <div>
+                        <h4 class="font-bold text-xs text-emerald-300">Sesuai / Optimal (Aligned)</h4>
+                        <p class="text-[11px] text-slate-400 leading-tight mt-1">Seimbang di tingkat <b>High Performance</b> (&ge;0.85).</p>
+                    </div>
+                </div>
+                <div class="bg-cyan-950/40 border border-cyan-800/60 p-3 rounded-lg flex items-start space-x-3">
+                    <div class="w-4 h-4 rounded-full bg-cyan-400 shrink-0 mt-0.5"></div>
+                    <div>
+                        <h4 class="font-bold text-xs text-cyan-300">Melampaui Awareness</h4>
+                        <p class="text-[11px] text-slate-400 leading-tight mt-1">Indeks ETPD <b>Sangat Tinggi</b> namun Awareness Menengah.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PETA INDONESIA BERDASARKAN GAP ANALYSIS -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-lg relative">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                <div>
+                    <h2 class="font-bold text-slate-100 text-base flex items-center">
+                        <i class="fa-solid fa-map-location-dot text-blue-400 mr-2"></i> Peta Sebaran Kesenjangan (Gap) SP vs ETPD
+                    </h2>
+                    <p class="text-xs text-slate-400">Didukung oleh Esri Maps & OpenStreetMap</p>
+                </div>
+                <div id="mapStatus" class="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">
+                    <i class="fa-solid fa-spinner fa-spin mr-1 text-amber-400"></i> Memuat Lapisan Peta...
+                </div>
+            </div>
+            <!-- Elemen Peta -->
+            <div id="map" class="h-[500px] w-full rounded-lg border border-slate-700 bg-slate-900"></div>
+        </div>
+
+        <!-- Metric & Ranking Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Leaderboard High Gap -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 lg:col-span-1">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-slate-100 text-sm flex items-center">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-400 mr-2"></i> Prioritas High Gap
+                    </h2>
+                </div>
+                <div class="space-y-2" id="highGapContainer">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <!-- Chart Visualization -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 lg:col-span-3">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="font-bold text-slate-100 text-sm">Grafik Perbandingan Gap Analysis Per Provinsi</h2>
+                    </div>
+                </div>
+                <div class="h-[320px] relative">
+                    <canvas id="gapChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Data Utama (Tanpa DOB Papua Baru)
+        const regionData = [
+            { name: "DKI Jakarta", awareness: "Sangat Tinggi", etpd: 0.97, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-6.2088, 106.8456] },
+            { name: "Bali", awareness: "Sangat Tinggi", etpd: 0.96, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-8.4095, 115.1889] },
+            { name: "Aceh", awareness: "Sangat Tinggi", etpd: 0.93, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [4.6951, 96.7494] },
+            { name: "Sumatera Utara", awareness: "Tinggi", etpd: 0.92, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [2.1154, 99.5451] },
+            { name: "Banten", awareness: "Tinggi", etpd: 0.90, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-6.4058, 106.0640] },
+            { name: "DI Yogyakarta", awareness: "Sangat Tinggi", etpd: 0.90, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-7.8753, 110.4262] },
+            { name: "Jawa Barat", awareness: "Sangat Tinggi", etpd: 0.90, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-6.9175, 107.6191] },
+            { name: "Kep. Riau", awareness: "Menengah", etpd: 0.90, gapCategory: "Exceeding", gapLabel: "Melampaui Awareness", color: "#22d3ee", coords: [3.9456, 108.1428] },
+            { name: "Kalimantan Timur", awareness: "Sangat Tinggi", etpd: 0.89, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [0.5387, 116.4194] },
+            { name: "Jawa Timur", awareness: "Sangat Tinggi", etpd: 0.88, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-7.5360, 112.2384] },
+            { name: "Kalimantan Utara", awareness: "Tinggi", etpd: 0.88, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [3.0731, 116.0414] },
+            { name: "Riau", awareness: "Menengah", etpd: 0.86, gapCategory: "Exceeding", gapLabel: "Melampaui Awareness", color: "#22d3ee", coords: [0.2933, 101.7068] },
+            { name: "Sulawesi Selatan", awareness: "Tinggi", etpd: 0.86, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-3.6687, 119.9740] },
+            { name: "Jawa Tengah", awareness: "Tinggi", etpd: 0.86, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-7.1509, 110.1403] },
+            { name: "Kep. Bangka Belitung", awareness: "Tinggi", etpd: 0.85, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-2.7411, 106.4406] },
+            { name: "Kalimantan Selatan", awareness: "Tinggi", etpd: 0.85, gapCategory: "Aligned", gapLabel: "Sesuai (Optimal)", color: "#10b981", coords: [-3.0926, 115.2838] },
+            { name: "Sulawesi Utara", awareness: "Tinggi", etpd: 0.83, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [0.6246, 123.9750] },
+            { name: "Lampung", awareness: "Sangat Tinggi", etpd: 0.82, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-4.5586, 105.4068] },
+            { name: "Kalimantan Barat", awareness: "Menengah", etpd: 0.82, gapCategory: "Exceeding", gapLabel: "Melampaui Awareness", color: "#22d3ee", coords: [-0.2787, 111.4753] },
+            { name: "Sumatera Barat", awareness: "Sangat Tinggi", etpd: 0.80, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-0.7399, 100.8000] },
+            { name: "Sulawesi Tengah", awareness: "Tinggi", etpd: 0.79, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [-1.4300, 121.4456] },
+            { name: "Sumatera Selatan", awareness: "Tinggi", etpd: 0.78, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [-3.3194, 104.9147] },
+            { name: "Sulawesi Tenggara", awareness: "Sangat Tinggi", etpd: 0.78, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-4.1449, 122.1746] },
+            { name: "Nusa Tenggara Barat", awareness: "Menengah", etpd: 0.78, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [-8.6529, 117.3616] },
+            { name: "Kalimantan Tengah", awareness: "Tinggi", etpd: 0.77, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [-1.6815, 113.3824] },
+            { name: "Jambi", awareness: "Sangat Tinggi", etpd: 0.76, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-1.6116, 103.6131] },
+            { name: "Maluku Utara", awareness: "Tinggi", etpd: 0.76, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [1.5709, 127.8087] },
+            { name: "Papua Barat", awareness: "Tinggi", etpd: 0.76, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [-1.3361, 133.1747] },
+            { name: "Gorontalo", awareness: "Tinggi", etpd: 0.74, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [0.6999, 122.4467] },
+            { name: "Maluku", awareness: "Tinggi", etpd: 0.73, gapCategory: "Moderate Gap", gapLabel: "Kesenjangan Sedang", color: "#f59e0b", coords: [-3.2385, 130.1453] },
+            { name: "Sulawesi Barat", awareness: "Sangat Tinggi", etpd: 0.72, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-2.8441, 119.2321] },
+            { name: "Nusa Tenggara Timur", awareness: "Sangat Tinggi", etpd: 0.71, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-8.6573, 121.0794] },
+            { name: "Bengkulu", awareness: "Sangat Tinggi", etpd: 0.70, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-3.5778, 102.3464] },
+            { name: "Papua", awareness: "Sangat Tinggi", etpd: 0.68, gapCategory: "High Gap", gapLabel: "Kesenjangan Tinggi", color: "#f43f5e", coords: [-4.2699, 138.0804] }
+        ];
+
+        // 1. Inisialisasi Peta Leaflet
+        const map = L.map('map').setView([-2.548926, 118.014863], 5);
+
+        // Penyedia Basemap (Esri Dark Gray)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 16
+        }).addTo(map);
+
+        // Popup HTML Generator
+        function createPopupContent(match) {
+            return `
+                <div class="p-1">
+                    <h4 class="font-bold text-sm text-blue-400 border-b border-slate-700 pb-1 mb-2">${match.name}</h4>
+                    <div class="space-y-1 text-xs">
+                        <div class="flex justify-between space-x-4">
+                            <span class="text-slate-400">Status Gap:</span>
+                            <span class="font-bold" style="color:${match.color}">${match.gapLabel}</span>
+                        </div>
+                        <div class="flex justify-between space-x-4">
+                            <span class="text-slate-400">Awareness:</span>
+                            <span class="font-medium text-slate-200">${match.awareness}</span>
+                        </div>
+                        <div class="flex justify-between space-x-4">
+                            <span class="text-slate-400">Indeks ETPD:</span>
+                            <span class="font-bold text-emerald-400">${match.etpd}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render Fallback Markers
+        function renderFallbackMarkers() {
+            regionData.forEach(item => {
+                if (item.coords) {
+                    const circle = L.circleMarker(item.coords, {
+                        radius: 10,
+                        fillColor: item.color,
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(map);
+
+                    circle.bindPopup(createPopupContent(item));
+                    
+                    // Hover effect
+                    circle.on('mouseover', function (e) {
+                        this.openPopup();
+                        this.setRadius(14);
+                    });
+                    circle.on('mouseout', function (e) {
+                        this.setRadius(10);
+                    });
+                }
+            });
+            document.getElementById('mapStatus').innerHTML = `
+                <span class="text-emerald-400"><i class="fa-solid fa-check-circle mr-1"></i> Peta Berhasil Dimuat (Mode Titik)</span>
+            `;
+        }
+
+        // Render peta langsung
+        renderFallbackMarkers();
+
+        // 2. Chart.js & UI Logic
+        function initDashboard() {
+            // Render High Gap List
+            const highGaps = regionData.filter(d => d.gapCategory === 'High Gap').sort((a,b) => a.etpd - b.etpd);
+            const highGapContainer = document.getElementById('highGapContainer');
+            highGaps.forEach(item => {
+                highGapContainer.innerHTML += `
+                    <div class="p-2 rounded bg-rose-950/30 border border-rose-800/40 text-xs flex justify-between items-center hover:bg-rose-900/50 transition">
+                        <span class="font-medium">${item.name}</span>
+                        <span class="font-bold text-rose-400 bg-rose-950/80 px-2 py-0.5 rounded">ETPD ${item.etpd}</span>
+                    </div>
+                `;
+            });
+
+            // Render Chart
+            const ctx = document.getElementById('gapChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: regionData.map(d => d.name),
+                    datasets: [{
+                        label: 'Indeks ETPD',
+                        data: regionData.map(d => d.etpd),
+                        backgroundColor: regionData.map(d => d.color),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0.5, max: 1.0, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+                    }
+                }
+            });
+            
+            // Fix Leaflet sizing bug jika dimuat secara asinkron
+            setTimeout(() => { map.invalidateSize(); }, 500);
+        }
+
+        initDashboard();
+    </script>
+</body>
+</html>
